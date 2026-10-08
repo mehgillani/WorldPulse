@@ -1,0 +1,6 @@
+{
+  "name": "WORLDPULSE — The World. In Focus.",
+  "description": "A modern global digital news and trends publication covering world events, politics, business, technology, science, culture, and the environment with low-latency AI briefings and full editorial management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

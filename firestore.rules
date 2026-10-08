@@ -1,0 +1,292 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // GLOBAL HARDENED PRIMITIVES
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'mehgillani5373@gmail.com'
+      );
+    }
+
+    // =========================================================================
+    // VALIDATION BLUEPRINTS (Anti-Update-Gap & Strict Schema Synchronicity)
+    // =========================================================================
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'assignedAt']) &&
+        data.keys().hasOnly(['uid', 'assignedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.assignedAt is timestamp;
+    }
+
+    function isValidUserPublicProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'interests', 'savedArticleIds', 'newsletterSubscribed', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'interests', 'savedArticleIds', 'newsletterSubscribed', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+        data.interests is list && data.interests.size() <= 15 &&
+        (data.interests.size() == 0 || (data.interests[0] is string && data.interests[0].size() <= 40)) &&
+        data.savedArticleIds is list && data.savedArticleIds.size() <= 50 &&
+        (data.savedArticleIds.size() == 0 || (data.savedArticleIds[0] is string && data.savedArticleIds[0].size() <= 128)) &&
+        data.newsletterSubscribed is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidArticle(data) {
+      return data.keys().hasAll([
+          'id', 'title', 'subtitle', 'slug', 'category', 'categoryName',
+          'tags', 'authorId', 'authorName', 'authorRole', 'featuredImage',
+          'imageCaption', 'body', 'status', 'publishedAt', 'readingTime',
+          'views', 'isLead', 'isTrending', 'isDeveloping', 'isDemo',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'title', 'subtitle', 'slug', 'category', 'categoryName',
+          'tags', 'authorId', 'authorName', 'authorRole', 'featuredImage',
+          'imageCaption', 'body', 'status', 'publishedAt', 'readingTime',
+          'views', 'isLead', 'isTrending', 'isDeveloping', 'isDemo',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 240 &&
+        data.subtitle is string && data.subtitle.size() <= 500 &&
+        data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 180 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+        data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 80 &&
+        data.tags is list && data.tags.size() <= 12 &&
+        (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40)) &&
+        data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100 &&
+        data.authorRole is string && data.authorRole.size() <= 120 &&
+        data.featuredImage is string && data.featuredImage.size() <= 150000 &&
+        data.imageCaption is string && data.imageCaption.size() <= 400 &&
+        data.body is string && data.body.size() >= 1 && data.body.size() <= 100000 &&
+        data.status is string && data.status.size() <= 20 && data.status in ['published', 'draft', 'scheduled'] &&
+        data.publishedAt is string && data.publishedAt.size() >= 1 && data.publishedAt.size() <= 40 &&
+        data.readingTime is number && data.readingTime >= 1 && data.readingTime <= 120 &&
+        data.views is number && data.views >= 0 &&
+        data.isLead is bool &&
+        data.isTrending is bool &&
+        data.isDeveloping is bool &&
+        data.isDemo is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll([
+          'id', 'articleId', 'articleTitle', 'authorId',
+          'authorName', 'content', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'articleId', 'articleTitle', 'authorId',
+          'authorName', 'content', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.articleId is string && data.articleId.size() >= 1 && data.articleId.size() <= 128 && data.articleId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.articleTitle is string && data.articleTitle.size() >= 1 && data.articleTitle.size() <= 240 &&
+        data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+        data.authorId == request.auth.uid &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+        data.content is string && data.content.size() >= 1 && data.content.size() <= 1500 &&
+        data.status is string && data.status.size() <= 20 && data.status in ['approved', 'pending', 'rejected', 'spam'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSiteConfig(data) {
+      return data.keys().hasAll(['id', 'type', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'type', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.type is string && data.type.size() <= 40 && data.type in ['breakingNews', 'siteSettings', 'categories', 'ads'] &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // COLLECTION 1: /admins/{adminId}
+    // =========================================================================
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if false;
+      allow create: if isSignedIn() && isValidId(adminId) && isValidAdminRecord(incoming()) &&
+        incoming().uid == adminId &&
+        incoming().assignedAt == request.time &&
+        isAdmin();
+      allow update: if isSignedIn() && isValidId(adminId) && isValidAdminRecord(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().assignedAt == existing().assignedAt &&
+        isAdmin();
+      allow delete: if isValidId(adminId) && isAdmin();
+    }
+
+    // =========================================================================
+    // COLLECTION 2: /users/{userId} (Non-PII Public Reader Profile)
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(userId) && isValidUserPublicProfile(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isOwner(userId);
+      allow update: if isSignedIn() && isValidId(userId) && isValidUserPublicProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'interests', 'savedArticleIds', 'newsletterSubscribed', 'updatedAt'
+          ])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(userId) && (isOwner(userId) || isAdmin());
+
+      // =======================================================================
+      // SUBCOLLECTION 2A: /users/{userId}/private/{docId} (Isolated PII)
+      // =======================================================================
+      match /private/{docId} {
+        allow get: if isValidId(userId) && isValidId(docId) && (isOwner(userId) || isAdmin()) &&
+          get(/databases/$(database)/documents/users/$(userId)).data.uid == userId;
+        allow list: if false;
+        allow create: if isSignedIn() && isValidId(userId) && isValidId(docId) && isValidUserPrivateInfo(incoming()) &&
+          incoming().uid == userId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          isOwner(userId) &&
+          get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
+        allow update: if isSignedIn() && isValidId(userId) && isValidId(docId) && isValidUserPrivateInfo(incoming()) &&
+          incoming().uid == existing().uid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid && (
+            (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt'])) ||
+            isAdmin()
+          );
+        allow delete: if isValidId(userId) && isValidId(docId) && isAdmin();
+      }
+    }
+
+    // =========================================================================
+    // COLLECTION 3: /articles/{articleId}
+    // =========================================================================
+    match /articles/{articleId} {
+      allow get: if isValidId(articleId) && (existing().status == 'published' || isAdmin());
+      allow list: if resource.data.status == 'published' || isAdmin();
+      allow create: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) &&
+        incoming().id == articleId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (isVerified() &&
+            existing().status == 'published' &&
+            incoming().views == existing().views + 1 &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['views', 'updatedAt']))
+        );
+      allow delete: if isValidId(articleId) && isAdmin();
+    }
+
+    // =========================================================================
+    // COLLECTION 4: /comments/{commentId}
+    // =========================================================================
+    match /comments/{commentId} {
+      allow get: if isValidId(commentId) && (
+        existing().status == 'approved' ||
+        (isSignedIn() && existing().authorId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if resource.data.status == 'approved' ||
+        (isSignedIn() && resource.data.authorId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isSignedIn() && isValidId(commentId) && isValidComment(incoming()) &&
+        incoming().id == commentId &&
+        incoming().status == 'approved' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isVerified() &&
+        exists(/databases/$(database)/documents/articles/$(incoming().articleId));
+      allow update: if isSignedIn() && isValidId(commentId) && isValidComment(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().articleId == existing().articleId &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'content', 'updatedAt']);
+      allow delete: if isValidId(commentId) && isAdmin();
+    }
+
+    // =========================================================================
+    // COLLECTION 5: /config/{configId}
+    // =========================================================================
+    match /config/{configId} {
+      allow get: if isValidId(configId) && existing().type in ['breakingNews', 'siteSettings', 'categories', 'ads'];
+      allow list: if resource.data.type in ['breakingNews', 'siteSettings', 'categories', 'ads'];
+      allow create: if isSignedIn() && isValidId(configId) && isValidSiteConfig(incoming()) &&
+        incoming().id == configId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isSignedIn() && isValidId(configId) && isValidSiteConfig(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().type == existing().type &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['updatedBy', 'updatedAt']);
+      allow delete: if isValidId(configId) && isAdmin();
+    }
+  }
+}

@@ -1,0 +1,349 @@
+{
+  "entities": {
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator lookup document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "assignedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "assignedAt"]
+    },
+    "UserPublicProfile": {
+      "title": "UserPublicProfile",
+      "description": "Non-PII reader profile storing topic interests and saved offline article IDs.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "interests": {
+          "type": "array",
+          "maxLength": 15
+        },
+        "savedArticleIds": {
+          "type": "array",
+          "maxLength": 50
+        },
+        "newsletterSubscribed": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "interests",
+        "savedArticleIds",
+        "newsletterSubscribed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII subcollection storing the user's private email address.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "ArticleDoc": {
+      "title": "ArticleDoc",
+      "description": "Editorial article dispatch stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "categoryName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "tags": {
+          "type": "array",
+          "maxLength": 12
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "authorRole": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "featuredImage": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 150000
+        },
+        "imageCaption": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["published", "draft", "scheduled"],
+          "maxLength": 20
+        },
+        "publishedAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "readingTime": {
+          "type": "number"
+        },
+        "views": {
+          "type": "number"
+        },
+        "isLead": {
+          "type": "boolean"
+        },
+        "isTrending": {
+          "type": "boolean"
+        },
+        "isDeveloping": {
+          "type": "boolean"
+        },
+        "isDemo": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "subtitle",
+        "slug",
+        "category",
+        "categoryName",
+        "tags",
+        "authorId",
+        "authorName",
+        "authorRole",
+        "featuredImage",
+        "imageCaption",
+        "body",
+        "status",
+        "publishedAt",
+        "readingTime",
+        "views",
+        "isLead",
+        "isTrending",
+        "isDeveloping",
+        "isDemo",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CommentDoc": {
+      "title": "CommentDoc",
+      "description": "Reader comment on a published article (strictly no PII email field).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "articleId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "articleTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "status": {
+          "type": "string",
+          "enum": ["approved", "pending", "rejected", "spam"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "articleId",
+        "articleTitle",
+        "authorId",
+        "authorName",
+        "content",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SiteConfigDoc": {
+      "title": "SiteConfigDoc",
+      "description": "Editorial configuration document for breaking news and site settings.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["breakingNews", "siteSettings", "categories", "ads"],
+          "maxLength": 40
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "type", "updatedBy", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Stores administrator UIDs for RBAC verification."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublicProfile" },
+      "description": "Stores non-PII user profile preferences, topic interests, and saved articles."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII subcollection storing private user email."
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/ArticleDoc" },
+      "description": "Stores WORLDPULSE articles (published, draft, scheduled)."
+    },
+    "/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/CommentDoc" },
+      "description": "Stores moderated reader comments linked to articles."
+    },
+    "/config/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfigDoc" },
+      "description": "Stores global editorial configuration metadata."
+    }
+  }
+}
